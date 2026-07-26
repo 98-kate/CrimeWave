@@ -162,7 +162,7 @@ int extract_option(const char * stegoFile, const char * outputFile) {
 	/** fflush() because when reading in the binary data to decompress, w/ "slurping STDIN" in Perl
 		 it will block and wait. fwrite() will also hold onto the bytes. 									**/
 	fwrite(compressed_payload, 1, extracted_bytes, pipe);
-   fflush(pipe);
+    fflush(pipe);
 	pclose(pipe);
 	free(compressed_payload);
 	printf("SUCCESS: Extracted file saved to %s\n", final_out);
