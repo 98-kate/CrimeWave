@@ -52,6 +52,15 @@ int extract_option(const char * stegoFile, const char * outputFile) {
 		return -1;
 	}
 
+	drwav_uint64 min_frames = (drwav_uint64)128 * blockSize;
+	if (total_pcm_frames < min_frames) {
+		printf("ERROR: %s is too short to contain a valid header.\n", stegoFile);
+		printf("Required minimum frames: %llu Available: %llu\n", min_frames, total_pcm_frames);
+		drwav_free(modified_audio, NULL);
+		return -1;
+	}
+
+ 	//printf("DEBUG: %s\n", outputFile);
 	/** Reads in file extension header (blocks 0 - 95)**/
 	for (l = 0; l < 96; l++) {
 		size_t block_begin = l * blockSize;
@@ -151,9 +160,18 @@ int extract_option(const char * stegoFile, const char * outputFile) {
 	const char * final_out = filename;	
 	FILE * pipe;
 	char cmd[512];
-	snprintf(cmd, sizeof(cmd), "perl -MCompress::Zlib -e 'undef $/; my $data = <STDIN>; print uncompress($data);' > \"%s\"", final_out);
-	
-	if ((pipe = popen(cmd, "w")) == NULL) {
+	snprintf(cmd, sizeof(cmd), 
+		"perl -MCompress::Zlib -e "
+		"\"undef $/; print uncompress(<STDIN>);\" > \"%s\"", 
+        final_out);
+
+	#ifdef _WIN32
+		pipe = _popen(cmd, "wb");
+	#else
+		pipe = popen(cmd, "w");
+	#endif
+
+	if (pipe == NULL) {
 		printf("ERROR: Failed to decompress extracted data. \n");
 		free(compressed_payload);
 		return -1;
@@ -162,10 +180,15 @@ int extract_option(const char * stegoFile, const char * outputFile) {
 	/** fflush() because when reading in the binary data to decompress, w/ "slurping STDIN" in Perl
 		 it will block and wait. fwrite() will also hold onto the bytes. 									**/
 	fwrite(compressed_payload, 1, extracted_bytes, pipe);
-    fflush(pipe);
-	pclose(pipe);
+   fflush(pipe);
+	#ifdef _WIN32
+		_pclose(pipe);
+	#else
+		 pclose(pipe);
+	#endif
+
 	free(compressed_payload);
-	printf("SUCCESS: Extracted file saved to %s\n", final_out);
+	printf("Extracted file saved to %s\n", final_out);
 	
 	return 0;
 }
