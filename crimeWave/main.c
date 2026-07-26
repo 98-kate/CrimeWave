@@ -39,11 +39,19 @@ int main(int argc, char * argv[]) {
 		/** hiddenFile [-m], coverFile [-c], outputFile [-o] **/
 		char * hiddenFile = NULL, * coverFile = NULL, * outputFile = NULL;
 		optind = 2;
-		while ((opt = getopt(argc, argv, "m:c:o:")) != -1) {
+		while ((opt = getopt(argc, argv, ":m:c:o:")) != -1) {
 			switch (opt) {
 				case 'm': hiddenFile = optarg; break;
-				case 'c': coverFile = optarg; break;
+				case 'c': coverFile  = optarg; break;
 				case 'o': outputFile = optarg; break;
+				case ':':
+						printf("\nERROR: Flag '-%c' requires a filename argument provided.\n", optopt);
+						helpMenu();
+						return -1;
+				case '?':
+						printf("\nERROR: Unrecognized flag  provided: -%c\n", optopt);
+						helpMenu();
+						return -1;
 				default: helpMenu(); return 0;
 			}
 		}		
@@ -57,18 +65,26 @@ int main(int argc, char * argv[]) {
 		 	printf("\n\nERROR: Missing -c flag for cover file!\n");
 			helpMenu();
 			return -1;
-		}	
-
+		}
+			
 	return hide_option(hiddenFile, coverFile, outputFile);
   } // END OF HIDE OPTION
 
 	if (strcmp(option, "-extract") == 0) {
 		char * modified_audio = NULL, * outputFile = NULL;
 		optind = 2;
-		while ((opt = getopt(argc, argv, "s:o:")) != -1) {
+		while ((opt = getopt(argc, argv, ":s:o:")) != -1) {
 			switch (opt) {
 				case 's': modified_audio = optarg; break;
 				case 'o': outputFile = optarg; break;
+				case ':':
+						printf("\nERROR: Option '-%c' requires a filename argument provided.\n", optopt);
+						helpMenu();
+						return -1;
+				case '?':
+						printf("\nERROR: Option '-%c' requires a filename argument provided.\n", optopt);
+						helpMenu();
+						return -1;
 			}
 		}
 
