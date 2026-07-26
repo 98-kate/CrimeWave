@@ -57,7 +57,7 @@ int extract_option(const char * stegoFile, const char * outputFile) {
 		size_t block_begin = l * blockSize;
 		if (block_begin + blockSize > total_pcm_frames) {
 			printf("ERROR: Audio file does not have enough samples for the extension header.\n");
-			printf("required: %zu, available: %llu\n", (block_begin + blocksize), total_pcm_frames);
+			printf("required: %zu, available: %llu\n", (block_begin + blockSize), total_pcm_frames);
 			drwav_free(modified_audio, NULL);
 			return -1;
 		}
@@ -71,7 +71,7 @@ int extract_option(const char * stegoFile, const char * outputFile) {
 		size_t block_begin = (96 + j) * blockSize;
 		 if (block_begin + blockSize > total_pcm_frames) {
 			 printf("ERROR: Audio file does not have enough samples for header.\n");
-			 printf("required: %zu, available: %llu\n", (block_begin + blocksize), total_pcm_frames);
+			 printf("required: %zu, available: %llu\n", (block_begin + blockSize), total_pcm_frames);
 			 drwav_free(modified_audio, NULL);
 			 return -1;
 		 }
