@@ -7,6 +7,8 @@ As of 07/13/2026: Uploaded the diagram I made-- Only the encoding and decoding p
 
 07/25/2026: Uploaded main & header files. Using dr_wav instead of the audio parser provided by the professor. 
 
+07/25/2026: Finally completed documentation for extract.c -- uploaded that
+
 ## Acknowledgements
 
 This project uses the following third-party libraries:
