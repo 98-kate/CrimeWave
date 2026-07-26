@@ -1,3 +1,11 @@
+/** 
+	 Group 1: Kate Goldman, Nikky Gonzales
+	 crimeWave.c
+	 This program reads in a 16-bit mono audio file and 
+	 hides a message of some arbitrary data type in it using
+	 echo-hiding. 
+	**/
+
 #include "dr_wav.h"
 #include "stego_fun.h"
 
