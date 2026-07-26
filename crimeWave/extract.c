@@ -1,5 +1,10 @@
 #include "dr_wav.h"
 #include "stego_fun.h"
+#ifdef _WIN32
+    #define PCLOSE _pclose
+#else
+    #define PCLOSE pclose
+#endif
 
 /** KEY EXAMPLE:
 	 If you're in a massive, empty, quiet building and you shout a phrase: you hear your
@@ -161,9 +166,8 @@ int extract_option(const char * stegoFile, const char * outputFile) {
 	FILE * pipe;
 	char cmd[512];
 	snprintf(cmd, sizeof(cmd), 
-		"perl -MCompress::Zlib -e "
-		"\"undef $/; print uncompress(<STDIN>);\" > \"%s\"", 
-        final_out);
+        "perl -MCompress::Zlib -e "
+		"\"undef $/; print uncompress(<STDIN>);\" > \"%s\"", final_out);
 
 	#ifdef _WIN32
 		pipe = _popen(cmd, "wb");
@@ -180,13 +184,8 @@ int extract_option(const char * stegoFile, const char * outputFile) {
 	/** fflush() because when reading in the binary data to decompress, w/ "slurping STDIN" in Perl
 		 it will block and wait. fwrite() will also hold onto the bytes. 									**/
 	fwrite(compressed_payload, 1, extracted_bytes, pipe);
-   fflush(pipe);
-	#ifdef _WIN32
-		_pclose(pipe);
-	#else
-		 pclose(pipe);
-	#endif
-
+    fflush(pipe);
+    PCLOSE(pipe);
 	free(compressed_payload);
 	printf("Extracted file saved to %s\n", final_out);
 	

@@ -2,6 +2,12 @@
 #include "dr_wav.h"
 #include "stego_fun.h"
 
+#ifdef _WIN32
+    #define PCLOSE _pclose
+#else
+    #define PCLOSE pclose
+#endif
+
 /** Helper function to make things a bit less ugly.. **/
 void converter(const unsigned char * bytes, size_t count, char * bits) {
 	for (size_t i = 0; i < count; i++) {
@@ -63,23 +69,48 @@ int hide_option(const char * hiddenFile, const char * coverFile, const char * ou
 		}
 
 		/** begin with assuming the compressed file will fit in 1KB **/
+		/** Reads in compressed data through a dynamic heap buffer. We begin with
+			 assuming that the compressed file will fit in 1KB, and doubles in size 
+			 if needed. **/
 		size_t capacity = 1024, bytesRead = 0;
 		payloadByteCount = 0, payloadByteVal = malloc(capacity);
+
+        if (payloadByteVal == NULL) {
+            printf("ERROR: Initial memory allocation failed.\n");
+            PCLOSE(pipe);
+            return -1;
+        }
 		
 		while ((bytesRead = fread(temp_buffer, 1, sizeof(temp_buffer), pipe)) > 0) {
-			if (payloadByteCount + bytesRead > capacity) {
-				capacity *= 2; // doubles allocated capacity size (1KB -> 2KB -> ...) IF NEEDED
-				payloadByteVal = realloc(payloadByteVal, capacity);
+			while (payloadByteCount + bytesRead > capacity) {
+				size_t new_cap = capacity * 2;
+				if (new_cap < capacity) {
+					printf("ERROR: Size of payload exceeded the capacity limit.\n");
+					free(payloadByteVal);
+					PCLOSE(pipe);
+					return -1;
+				}
+
+				void * temp_ptr = realloc(payloadByteVal, new_cap);
+				if (temp_ptr == NULL) {
+					printf("ERROR: Ran out of memory when increasing payload buffer.\n");
+					free(payloadByteVal);
+					PCLOSE(pipe);
+					return -1;
+				}
+				payloadByteVal = temp_ptr;
+				capacity = new_cap;
 			}
+
+		//	if (payloadByteCount + bytesRead > capacity) {
+		//		capacity *= 2; 
+		//		payloadByteVal = realloc(payloadByteVal, capacity);
+		//	}
 			memcpy(payloadByteVal + payloadByteCount, temp_buffer, bytesRead);
 			payloadByteCount += bytesRead;
 		}
 
-	#ifdef _WIN32
-		_pclose(pipe);
-	#else
-		 pclose(pipe);
-	#endif
+	PCLOSE(pipe);
 	} // END OF IF STATEMENT FOR FILE OR RANDOM DATA TO EMBED
 
 	/** BEGIN CONVERTING FILE PAYLOAD TO BITS, BUILD THE HEADER, & COMBINE BOTH INTO ONE MSG BUFFER **/
