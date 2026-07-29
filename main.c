@@ -1,8 +1,14 @@
 /** Group 1: Kate Goldman, Nikky Gonzales
-	 crimeWave.c
-	 This program reads in a 16-bit mono audio file and 
-	 hides a message of some arbitrary data type in it using
-	 echo-hiding. 														 **/
+    crimeWave.c
+    This program reads in a 16-bit mono audio file and 
+    hides a message of some arbitrary data type in it using
+    echo-hiding.                                          **/
+
+
+/** TODO:
+		- Make it so user doesn't have to re-enter parameter values when extracting.
+			-> Embed values into file during hiding?
+**/
 
 #include "dr_wav.h"
 #include "stego_fun.h"
@@ -64,7 +70,7 @@ int main(int argc, char * argv[]) {
 
 	if (strcmp(argv[1], "-hide") == 0) {
 		char * hiddenFile = NULL, * coverFile = NULL, * outputFile = NULL;
-		while ((opt = getopt_long_only(argc, argv, ":m:c:o:b:0:1:a:h", options, &opt_idx)) != -1) {
+		while ((opt = getopt_long_only(argc, argv, ":m:c:o:b:0:1:a:h:", options, &opt_idx)) != -1) {
 			switch (opt) {
 				case 'm': hiddenFile = optarg; break;
 				case 'c': coverFile  = optarg; break;
@@ -73,7 +79,7 @@ int main(int argc, char * argv[]) {
 				case '0': parameters.delay0 = atoi(optarg); break;
 				case '1': parameters.delay1 = atoi(optarg); break;
 				case 'a': parameters.alpha  = (float)atof(optarg); break;
-                case 'h': helpMenu(); return 0;
+				case 'h': helpMenu(); return 0;
 				case ':':
 						if (optopt == 0 && opt_idx >= 0) {
 							printf("\nERROR: Flag '-%s' requires a filename argument provided.\n", options[opt_idx].name);
@@ -104,11 +110,10 @@ int main(int argc, char * argv[]) {
 
 		return hide_option(hiddenFile, coverFile, outputFile, parameters);
 	 }  else if (strcmp(argv[1], "-extract") == 0) {
-		while ((opt = getopt_long_only(argc, argv, ":s:o:b:0:1:a:", options, &opt_idx)) != -1) {
+		while ((opt = getopt_long_only(argc, argv, ":s:o:", options, &opt_idx)) != -1) {
 			switch (opt) {
 				case 's': modified_audio = optarg; break;
 				case 'o': outputFile     = optarg; break;
-				case 'b': parameters.blockSize = (size_t)atoi(optarg); break;
 				case ':':
             	if (optopt == 0 && opt_idx >= 0) {  
 						printf("\nERROR: Option '-%s' requires a filename argument provided.\n", options[opt_idx].name);
@@ -140,5 +145,4 @@ int main(int argc, char * argv[]) {
 		return -1;
 	}
 	return extract_option(modified_audio, outputFile, parameters);
-   return 0;
 }
