@@ -9,6 +9,7 @@
 #include <math.h>
 #include <time.h>
 #include "dr_wav.h"
+#include <stdint.h>
 
 /** NOTE: When testing && altering block size --
 	 You are dealing with a trade-off between capacity, robustness, and imperceptibility.
