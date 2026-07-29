@@ -60,8 +60,12 @@ int extract_option(const char * stegoFile, const char * outputFile, Parameters p
       return -1;
 	}
 
-	/** Decoding the parameter header to recover the echo parameters if the user
-       entered any so they don't have to retype them when extracting.         **/
+	/** We are using hardcoded parameters for the first header loop because
+		 in order to find out what values the user entered (if any), we need
+		 the parameters to read the parameter block itself. These hardcoded
+       values are only applied to the first 128 bits of the header before
+		 extract.c can parse data from a wave before switching to the values
+		 entered by the user. 																**/
 	Parameters header_p = {BLOCKSIZE, DELAY0, DELAY1, ALPHA};
 	uint32_t blocksize = 0, delay0 = 0, delay1 = 0, alpha_bits = 0;
 
@@ -73,6 +77,7 @@ int extract_option(const char * stegoFile, const char * outputFile, Parameters p
 			return -1;
 		}
 		int bit = delay_bit(&modified_audio[block_begin], BLOCKSIZE, header_p);
+		/** This could be done better but I'm at my mental limit **/
 		if (l < 32) { 
 			if (bit) blocksize |= (1U << (31 - l)); 
 		} else if (l < 64) { 
@@ -84,76 +89,78 @@ int extract_option(const char * stegoFile, const char * outputFile, Parameters p
 		}
 	}
 
-	Parameters real_p;
-	real_p.blockSize = (size_t)blocksize;
-	real_p.delay0 = (int)delay0;
-	real_p.delay1 = (int)delay1;
-	memcpy(&real_p.alpha, &alpha_bits, sizeof(real_p.alpha));
+	Parameters user;
+	user.blockSize = (size_t)blocksize;
+	user.delay0 = (int)delay0;
+	user.delay1 = (int)delay1;
+	/** alpha is of type float so bit manipulation is difficult. We take the bits of 
+		 "alpha_bits" to do a memcpy into user.alpha to preserve the bit pattern		**/
+	memcpy(&user.alpha, &alpha_bits, sizeof(user.alpha));
 
-	if (real_p.blockSize == 0 || real_p.blockSize > total_pcm_frames || real_p.delay0 < 0 || real_p.delay1 < 0) {
-	 printf("ERROR: Decoded parameter header is invalid (blockSize=%zu delay0=%d delay1=%d).\n", 
-					real_p.blockSize, real_p.delay0, real_p.delay1);
-		drwav_free(modified_audio, NULL);
-		return -1;
+	if (user.blockSize == 0 || user.blockSize > total_pcm_frames || user.delay0 < 0 || user.delay1 < 0) {
+	 printf("ERROR: Decoded parameter header is invalid -- blockSize = %zu delay0 = %d delay1 = %d \n", 
+					user.blockSize, user.delay0, user.delay1);
+	 drwav_free(modified_audio, NULL);
+	 return -1;
 	}
 	// printf("DEBUG: Parameters entered during embedding: blockSize=%zu delay0=%d delay1=%d alpha=%f\n", 
-	// real_p.blockSize, real_p.delay0, real_p.delay1, real_p.alpha);
+	// user.blockSize, user.delay0, user.delay1, user.alpha);
 
-	size_t phase2_start = (size_t)PARAMETER * BLOCKSIZE;
+	/** After the user parameters are extracted from the fixed header **/
+	size_t part2_start = (size_t)PARAMETER * BLOCKSIZE;
+	/** EXT = file extension (first 12 bytes) **/
 	for (size_t l = 0; l < EXT; l++) {
-		size_t block_begin = phase2_start + l * real_p.blockSize;
-		if (block_begin + real_p.blockSize > total_pcm_frames) {
-        printf("ERROR: Audio file does not have enough samples for the extension header.\n");
-        printf("Required: %zu, Available: %llu\n", (block_begin + real_p.blockSize), total_pcm_frames);
-        drwav_free(modified_audio, NULL);
-        return -1;
+		size_t block_begin = part2_start + l * user.blockSize;
+		if (block_begin + user.blockSize > total_pcm_frames) {
+          printf("ERROR: Audio file does not have enough samples for the extension header.\n");
+          printf("Required: %zu, Available: %llu\n", (block_begin + user.blockSize), total_pcm_frames);
+          drwav_free(modified_audio, NULL);
+          return -1;
       }
-		int bit = delay_bit(&modified_audio[block_begin], real_p.blockSize, real_p);
+		int bit = delay_bit(&modified_audio[block_begin], user.blockSize, user);
 		size_t byte_idx = l / 8, bit_idx = 7 - (l % 8);
-		if (bit == 1) {
-			file_ext[byte_idx] |= (1 << bit_idx);
-		}
+		if (bit == 1) { file_ext[byte_idx] |= (1 << bit_idx); }
 	}
 
-	/** Payload size header. **/
+	/** SIZE = Payload size header (first 4 bytes) stores byte size of the hidden file **/
 	for (size_t l = 0; l < SIZE; l++) {
-		size_t block_begin = phase2_start + (EXT + l) * real_p.blockSize;
-		if (block_begin + real_p.blockSize > total_pcm_frames) {
+		size_t block_begin = part2_start + (EXT + l) * user.blockSize;
+		if (block_begin + user.blockSize > total_pcm_frames) {
 			printf("ERROR: Audio file does not have enough samples for payload size header.\n");
 			drwav_free(modified_audio, NULL);
 			return -1;
 		}
-		int bit = delay_bit(&modified_audio[block_begin], real_p.blockSize, real_p);
+		int bit = delay_bit(&modified_audio[block_begin], user.blockSize, user);
 		size_t bit_idx = 31 - l;
-		if (bit == 1) {
-			extracted_bytes |= (1U << bit_idx);
-		}
+		if (bit == 1) { extracted_bytes |= (1U << bit_idx); }
 	}
-   printf("DEBUG: Extracted raw header size value = %u (0x%08X)\n", extracted_bytes, extracted_bytes);
-	size_t total_bits 	 = (size_t)extracted_bytes * 8;
-	size_t payload_start = phase2_start + (size_t)(EXT + SIZE) * real_p.blockSize;
-	size_t required_end  = payload_start + total_bits * real_p.blockSize;
+   // printf("DEBUG: Extracted raw header size value = %u (0x%08X)\n", extracted_bytes, extracted_bytes);
 
-	if (required_end > total_pcm_frames) {
+	/** "end" for possible issues with size header corruption **/
+	size_t total_bits 	= (size_t)extracted_bytes * 8;
+	size_t payload_start = part2_start + (size_t)(EXT + SIZE) * user.blockSize;
+	size_t end  			= payload_start + total_bits * user.blockSize;
+
+	if (end > total_pcm_frames) {
 		printf("ERROR: Not enough PCM frames for extraction. File may be corrupted.\n");
-		printf("Required: %zu, Available: %llu\n", required_end, total_pcm_frames);
+		printf("Required: %zu, Available: %llu\n", end, total_pcm_frames);
 		drwav_free(modified_audio, NULL);
 		return -1;
 	}
 
-	/** extract payload bits **/
 	unsigned char * compressed_payload = malloc(extracted_bytes);
    if (compressed_payload == NULL) {
-      printf("ERROR: Memory allocation failed for payload buffer.\n");
-      drwav_free(modified_audio, NULL);
-      return -1;
+       printf("ERROR: Memory allocation failed for payload buffer.\n");
+       drwav_free(modified_audio, NULL);
+       return -1;
    }
 
+	
 	memset(compressed_payload, 0, extracted_bytes);
    for (size_t k = 0; k < total_bits; k++) {
-      size_t block_begin = payload_start + k * real_p.blockSize;
+      size_t block_begin = payload_start + k * user.blockSize;
       /** extracts 1 bit per audio block of a fixed size  **/
-      int bit = delay_bit(&modified_audio[block_begin], real_p.blockSize, real_p);
+      int bit = delay_bit(&modified_audio[block_begin], user.blockSize, user);
       /** Need to find byte to store bit in & its bit position.
           byte_idx finds which byte. 
           Example: byte_idx = 0 -> bits 0 - 7, byte_idx = 1 -> bits 8 to 15
@@ -176,6 +183,7 @@ int extract_option(const char * stegoFile, const char * outputFile, Parameters p
        k = 7 where block_index = 39, delay_bit() = 1, byte_idx = 0, bit_idx = 0
        compressed_payload[0] = 1000 0001                                         **/
 
+	/** TODO: Implement character filtering on file_ext to handle path separators/other issues **/
 	drwav_free(modified_audio, NULL);
 	char filename[256], cmd[512];
 	if (outputFile != NULL) {   /** User provided -o flag **/
@@ -191,10 +199,15 @@ int extract_option(const char * stegoFile, const char * outputFile, Parameters p
 	  free(compressed_payload);
      return -1;
 	}
+
 	fwrite(compressed_payload, 1, extracted_bytes, fout);
+	if (fwrite(compressed_payload, 1, extracted_bytes, fout) != extracted_bytes) {
+		printf("ERROR: Failed to write full payload.\n");
+	}
+
 	fclose(fout);
 	free(compressed_payload);
 
-	printf("SUCCESS: Decompressed %u bytes and saved to %s\n", extracted_bytes, final_out);
+	printf("SUCCESS: File saved to %s\n", final_out);
 	return 0;
 }
