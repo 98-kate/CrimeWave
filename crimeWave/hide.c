@@ -13,11 +13,15 @@ void converter(const unsigned char * bytes, size_t count, char * bits) {
 
 int hide_option(const char * hiddenFile, const char * coverFile, const char * outputFile, Parameters p) {
 	unsigned char * payloadByteVal = NULL;
-	size_t payloadByteCount = 64;
+	size_t payloadByteCount = 0;
 
 	if (strcmp(hiddenFile, "random") == 0) {
 		FILE * urand;
+		srand((unsigned int)time(NULL));
+		size_t min_bytes = 16, max_bytes = 256;
+		payloadByteCount = min_bytes + (rand() % (max_bytes - min_bytes + 1));
 		payloadByteVal = malloc(payloadByteCount);
+
 		if (payloadByteVal == NULL) {
 			printf("ERROR: Memory allocation failed for -random payload option.\n");
 			return -1;
