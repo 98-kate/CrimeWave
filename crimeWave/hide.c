@@ -14,17 +14,14 @@ void converter(const unsigned char * bytes, size_t count, char * bits) {
 int hide_option(const char * hiddenFile, const char * coverFile, const char * outputFile, Parameters p) {
 	unsigned char * payloadByteVal = NULL;
 	size_t payloadByteCount = 64;
-	FILE * check_file;	
-
-	if ((check_file = fopen(hiddenFile, "rb")) == NULL) {
-		printf("ERROR: The file \"%s\" you are trying to hide does not exist.\n", hiddenFile);
-		return -1;
-	}
-	fclose(check_file);
 
 	if (strcmp(hiddenFile, "random") == 0) {
 		FILE * urand;
 		payloadByteVal = malloc(payloadByteCount);
+		if (payloadByteVal == NULL) {
+			printf("ERROR: Memory allocation failed for -random payload option.\n");
+			return -1;
+		}
 
 		/** NOTE: I wanted more entropy, so if this is ran with Linux, it will
 			 read the raw bytes from the kernel via /dev/urandom. If that fails, it
@@ -39,19 +36,25 @@ int hide_option(const char * hiddenFile, const char * coverFile, const char * ou
 			} 
 		}
 	} else { 
-		
-    FILE * fptr;
-	 if ((fptr = fopen(hiddenFile, "rb")) == NULL) {
-     printf("ERROR: Couldn't open file: %s\n", hiddenFile);
-	  return -1;
-	 }
+    	FILE * fptr;	
+	 	if ((fptr = fopen(hiddenFile, "rb")) == NULL) {
+		 	printf("ERROR: The file \"%s\" you are trying to hide does not exist.\n", hiddenFile);
+		 	return -1;
+	 	}
 
-    fseek(fptr, 0, SEEK_END);
-    payloadByteCount = ftell(fptr);
-    fseek(fptr,0,SEEK_SET);
-	 unsigned char * payloadByteVal = malloc(payloadByteCount);
-	 fread(payloadByteVal, 1, payloadByteCount, fptr);
-    fclose(fptr);
+    	fseek(fptr, 0, SEEK_END);
+    	payloadByteCount = ftell(fptr);
+    	fseek(fptr,0,SEEK_SET);
+		payloadByteVal = malloc(payloadByteCount);
+		if (payloadByteVal == NULL) {
+			printf("ERROR: Memory allocation failed for payload file.\n");
+			fclose(fptr);
+			return -1;
+		}
+
+	 	fread(payloadByteVal, 1, payloadByteCount, fptr);
+    	fclose(fptr);
+	}
 	 // total bits in payload to be hidden (ex: 64 * 8 = 512 bits)
 	 size_t payloadBitCount = (payloadByteCount * 8);   
 	 // converts payload bytes to 1 bit per array
@@ -96,7 +99,7 @@ int hide_option(const char * hiddenFile, const char * coverFile, const char * ou
 		 payload_bits     - buffer - expanded payload bits [0,1]
 		 header_bits      - buffer - header length bits [0,1]
 		 final_stream     - buffer - combined header + payload bits				**/
-
+ 
  /** BEGIN USING DR_WAV TO READ COVER AUDIO **/
 	unsigned int channels, sample_rate;
 	drwav_uint64 total_pcm_frames;
@@ -201,7 +204,5 @@ int hide_option(const char * hiddenFile, const char * coverFile, const char * ou
 	free(yN_audio);
 	free(payloadByteVal);
 	free(final_stream);
-	
 	return 0;
-}
 }

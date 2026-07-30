@@ -185,7 +185,7 @@ int extract_option(const char * stegoFile, const char * outputFile, Parameters p
 
 	/** TODO: Implement character filtering on file_ext to handle path separators/other issues **/
 	drwav_free(modified_audio, NULL);
-	char filename[256], cmd[512];
+	char filename[256];
 	if (outputFile != NULL) {   /** User provided -o flag **/
 		snprintf(filename, sizeof(filename), "%s", outputFile);
 	} else { /** No -o flag -- grab file ext used when hiding, otherwise default to .bin **/

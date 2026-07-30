@@ -1,4 +1,3 @@
-
 #include "dr_wav.h"
 #include "stego_fun.h"
 
@@ -29,8 +28,11 @@ void helpMenu() {
 }
 
 int main(int argc, char * argv[]) {
-	char * modified_audio = NULL, * outputFile = NULL;
+	// printf("DEBUG: for random -- argc = %d, argv[1] = %s\n", argc, argv[1] ? argv[1] : "NULL");
+   // fflush(stdout);
+	// setbuf(stdout, NULL);
 
+	char * modified_audio = NULL, * outputFile = NULL;
    Parameters parameters = {
       .blockSize = default_blockSize,
       .delay0 = default_delay0,
@@ -39,10 +41,10 @@ int main(int argc, char * argv[]) {
    };
 
 	static struct option options[] = {
-		{"hide", 	  required_argument, 0, 'm'},	
-		{"extract",	  required_argument, 0, 's'},
-		{"cover",	  required_argument, 0, 'c'},
-		{"out",		  required_argument, 0, 'o'},
+		{"m",			  required_argument, 0, 'm'},
+		{"c",			  required_argument, 0, 'c'},
+		{"o",			  required_argument, 0, 'o'},
+		{"s",			  required_argument, 0, 's'},
 		{"blocksize", required_argument, 0, 'b'},
 		{"d0",		  required_argument, 0, '0'},
 		{"d1",	 	  required_argument, 0, '1'},
@@ -51,14 +53,17 @@ int main(int argc, char * argv[]) {
 		{0, 0, 0, 0}};
 
 	int opt, opt_idx = 0;
-	optind = 2;
 	if (argc < 2) {
 		helpMenu();
 		return -1;
 	}
 
+	//printf("DEBUG: for random -- argc = %d, argv[1] = %s\n", argc, argv[1] ? argv[1] : "NULL");
+   //fflush(stdout);
+
 	if (strcmp(argv[1], "-hide") == 0) {
 		char * hiddenFile = NULL, * coverFile = NULL, * outputFile = NULL;
+		optind = 2;
 		while ((opt = getopt_long_only(argc, argv, ":m:c:o:b:0:1:a:h:", options, &opt_idx)) != -1) {
 			switch (opt) {
 				case 'm': hiddenFile = optarg; break;
@@ -85,7 +90,7 @@ int main(int argc, char * argv[]) {
 						}
                   helpMenu();
                   return -1;
-            default: helpMenu(); return 0;	
+            default: break;	
 		  }
 		}
 		if (hiddenFile == NULL) {
@@ -99,6 +104,7 @@ int main(int argc, char * argv[]) {
 
 		return hide_option(hiddenFile, coverFile, outputFile, parameters);
 	 }  else if (strcmp(argv[1], "-extract") == 0) {
+		optind = 2;
 		while ((opt = getopt_long_only(argc, argv, ":s:o:", options, &opt_idx)) != -1) {
 			switch (opt) {
 				case 's': modified_audio = optarg; break;
