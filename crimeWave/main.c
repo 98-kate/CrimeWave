@@ -30,7 +30,6 @@ void helpMenu() {
     printf("\t./crimeWave -hide -m <message.ext> -c <cover_file.wav> [-o <stego_file.wav>]\n");
 	 printf("\t./crimeWave -hide -m <message.ext> -c <cover_file.wav> [-o <stego_file.wav>] [-b 1024 -d0 100 -d1 200 -a 0.15]\n");
     printf("\t./crimeWave -extract -s <stego_file.wav> [-o <message.ext>]\n");
-    printf("\t./crimeWave -extract -s <stego_file.wav> [-o <message.ext>] [-b 1024 -d0 100 -d1 200 -a 0.15]\n");
 }
 
 int main(int argc, char * argv[]) {
