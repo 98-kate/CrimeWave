@@ -155,7 +155,6 @@ int extract_option(const char * stegoFile, const char * outputFile, Parameters p
        return -1;
    }
 
-	
 	memset(compressed_payload, 0, extracted_bytes);
    for (size_t k = 0; k < total_bits; k++) {
       size_t block_begin = payload_start + k * user.blockSize;
@@ -200,7 +199,6 @@ int extract_option(const char * stegoFile, const char * outputFile, Parameters p
      return -1;
 	}
 
-	fwrite(compressed_payload, 1, extracted_bytes, fout);
 	if (fwrite(compressed_payload, 1, extracted_bytes, fout) != extracted_bytes) {
 		printf("ERROR: Failed to write full payload.\n");
 	}
